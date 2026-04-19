@@ -1,0 +1,25 @@
+spring:
+  application:
+    name: guardrail-api
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/guardraildb
+    username: guardrail
+    password: password
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: true
+    properties:
+      hibernate:
+        format_sql: true
+
+  data:
+    redis:
+      host: localhost
+      port: 6379
+
+server:
+  port: 8080
