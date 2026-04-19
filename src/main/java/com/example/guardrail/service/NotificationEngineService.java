@@ -45,18 +45,33 @@ public class NotificationEngineService {
 
         for (String userId : users) {
             String pendingListKey = "user:" + userId + ":pending_notifs";
-            List<String> botIds = redisTemplate.opsForList().range(pendingListKey, 0, -1);
+            String processingKey = pendingListKey + ":processing";
             
-            if (botIds != null && !botIds.isEmpty()) {
-                String firstBot = botIds.get(0);
-                int others = botIds.size() - 1;
+            try {
+                // Rename the key atomically to avoid data loss from concurrent pushes
+                redisTemplate.rename(pendingListKey, processingKey);
                 
-                log.info("Summarized Push Notification: Bot {} and {} others interacted with your posts.", firstBot, others);
+                List<String> botIds = redisTemplate.opsForList().range(processingKey, 0, -1);
                 
-                // Clear the redis list for that user
-                redisTemplate.delete(pendingListKey);
+                if (botIds != null && !botIds.isEmpty()) {
+                    String firstBot = botIds.get(0);
+                    int others = botIds.size() - 1;
+                    
+                    if (others == 0) {
+                        log.info("Summarized Push Notification: Bot {} interacted with your posts.", firstBot);
+                    } else {
+                        log.info("Summarized Push Notification: Bot {} and {} others interacted with your posts.", firstBot, others);
+                    }
+                }
+                
+                // Clean up the processing list
+                redisTemplate.delete(processingKey);
+            } catch (Exception e) {
+                // Ignore if the key doesn't exist during rename
+                log.debug("No pending notifications found to process for user {}", userId);
             }
-            // Remove user from the set
+            
+            // Remove user from the set since we processed this batch
             redisTemplate.opsForSet().remove(pendingUsersSet, userId);
         }
     }

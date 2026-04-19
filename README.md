@@ -36,3 +36,8 @@ mvn test -Dtest=ConcurrencySpamTest
 
 ## Postman Testing
 Import `guardrail_postman_collection.json` directly into Postman to review payload structures.
+
+## Known Limitations & Future Improvements
+
+**Distributed Transactions ("Lost Slot" anomaly):**
+Currently, the Redis limits (`checkHorizontalCap`) are verified and incremented before committing the changes to PostgreSQL. Because these are two separate systems, they do not share transactions. If the PostgreSQL transaction fails or rolls back (e.g. database goes down or a constraint issue), the Redis counter does not rollback. This leads to a persistent "Lost Slot" anomaly where a bot limit slot is permanently wasted. In a production system, this could be resolved gracefully by employing the Saga Pattern, Two-Phase Commits (2PC), or employing a worker queue / outbox pattern to finalize distributed system consistency.
